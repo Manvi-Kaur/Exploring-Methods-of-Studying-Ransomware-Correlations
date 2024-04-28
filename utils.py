@@ -84,32 +84,6 @@ def initializeTacticTechniqueMapping(tactics : List['domain.Tactic'], techniques
         if tactic not in technique.tactics: technique.tactics.append(tactic)
         if technique not in tactic.techniques: tactic.techniques.append(technique)
 
-'''def initializeProcedures(procedures : List['domain.Procedure'], techniques : List['domain.Technique']) -> None:
-    dfProcedures = pd.read_excel('technique1.xlsx', sheet_name='procedure')
-    print('Techniques file accessed')
-    dfProcedures = dfProcedures[['sourceID', 'targetID', 'citation']]
-    #dfProcedures = dfProcedures[['sourceId', 'targetId']]
-    dfProcedures['targetID'] = dfProcedures['targetID'].apply(lambda row : row[0:5])
-    dfProcedures['citation'] = dfProcedures['citation'].apply(find_citation)
-    dfPRef = pd.read_excel('technique1.xlsx', sheet_name='citations')
-    dfPRef['reference'] = dfPRef['citation'].apply(findYear)
-    dfPRef = dfPRef.drop_duplicates()
-    dfm = pd.merge(dfProcedures, dfPRef, how='left', left_on=['citation'], right_on=['citation'])
-    dfm = dfm.drop_duplicates()
-    dfm = dfm.dropna()
-
-    for row in dfm.itertuples():
-        procedure = domain.Procedure(row.sourceId + ':' + row.targetId + ':' + '-'.join(str(row.citation).split(' ')))
-        procedure.technique = next( (x for x in techniques if x.id == row.targetId), None)
-        procedure.year = row.reference
-        procedure.name = row.sourceId + ':' + row.targetId
-        procedure.reference = str(row.citation)
-        if 'G' in procedure.id: 
-            procedure.type = 'group'
-        else: 
-            procedure.type = 'software'
-        procedures.append(procedure)
-        print('Procedures: ' + procedures)'''
 def initializeProcedures(procedures : List['domain.Procedure'], techniques : List['domain.Technique']) -> None:
     dfProcedures = pd.read_excel('technique1.xlsx', sheet_name='procedure')
     print('Techniques file accessed')
@@ -135,14 +109,6 @@ def initializeGroups(groups : List['domain.Group'], techniques : List['domain.Te
     dfGroups = dfGroups.drop_duplicates()
     dfg = dfGroups.groupby(['sourceID'])
     
-    '''for name, group in dfg:
-        g = domain.Group(name)
-        
-        for row in group.itertuples():
-            ttp = [x for x in techniques if x.id == row.targetID][0]
-            if ttp not in g.techniques: 
-                g.techniques.append(ttp)
-        groups.append(g)'''
     for name, group in dfg:
         g = domain.Group(name)
         
@@ -167,15 +133,7 @@ def initializeSoftwares(softwares : List['domain.Software'], techniques : List['
     dfSoftwares['targetID'] = dfSoftwares['targetID'].apply(lambda v : v[0:5])
     dfSoftwares = dfSoftwares.drop_duplicates()
     dfg = dfSoftwares.groupby(['sourceID'])
-    
-    '''for name, group in dfg:
-        software = domain.Software(name)
-        
-        for row in group.itertuples():
-            ttp = [x for x in techniques if x.id == row.targetID][0]
-            if ttp not in software.techniques: 
-                software.techniques.append(ttp)
-        softwares.append(software)'''
+
     
     for name, group in dfg:
         software = domain.Software(name)
@@ -188,33 +146,8 @@ def initializeSoftwares(softwares : List['domain.Software'], techniques : List['
                 ttp = matching_techniques[0]
                 if ttp not in software.techniques: 
                     software.techniques.append(ttp)
-            #else:
-                #print("No matching technique found for target ID:", row.targetID)
         softwares.append(software)
-'''
-def initializeMitigations(mitigations: List['domain.Mitigation'], techniques: List['domain.Technique']) -> None:
-    dfMitigations = pd.read_excel('technique1.xlsx', sheet_name='associated mitigations')
-    print('Associated mitigations file accessed')
 
-    dfMitigations = dfMitigations[['sourceID', 'targetID']]
-    dfMitigations['targetID'] = dfMitigations['targetID'].apply(lambda v: v[0:5])
-    dfMitigations = dfMitigations.drop_duplicates()
-    dfm = dfMitigations.groupby(['sourceID'])
-
-    for name, group in dfm:
-        mitigation = domain.Mitigation(name)
-
-        for row in group.itertuples():
-            # Search for the technique with the target ID
-            matching_techniques = [technique for technique in techniques if technique.id == row.targetID]
-            if matching_techniques:
-                technique = matching_techniques[0]
-                if technique not in mitigation.techniques:
-                    mitigation.techniques.append(technique)
-            else:
-                print("No matching technique found for target ID:", row.targetID)
-
-        mitigations.append(mitigation)'''
 
 
 def buildDataSchema(tactics: List['domain.Tactic'], techniques: List['domain.Technique'], procedures: List['domain.Procedure'], groups: List['domain.Group'], softwares: List['domain.Software']) -> None:
@@ -224,7 +157,6 @@ def buildDataSchema(tactics: List['domain.Tactic'], techniques: List['domain.Tec
     initializeProcedures(procedures, techniques)
     initializeGroups(groups, techniques)
     initializeSoftwares(softwares, techniques)
-    #initializeMitigations(mitigations, techniques)
     return
 
 def degree_centrality(graph):
@@ -310,36 +242,18 @@ def generateRules(cocTTPs : List[List['domain.Technique']]):
     ttt = [list(x)[0] for x in dflen['itemsets'].tolist()]
     print(f'=========={len(set(ttt))}')
     
-    # print(tb.tabulate(dflen.sort_values('support', ascending=False).head(100000), headers='keys', tablefmt='psql'))
-    # print(tb.tabulate(dflen.describe(), headers='keys', tablefmt='psql'))
-    
     lengths = []
     for item in frequent_itemsets.itertuples():
         lengths.append(len(item.itemsets))
-    # print(Counter(lengths))
 
     rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.505)
-    # rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1.5)
     print(f'*** rules ***')
-    # print(tb.tabulate(rules.sort_values('confidence', ascending=False).head(20), headers='keys', tablefmt='psql'))
-    # print(tb.tabulate(rules.sort_values('lift', ascending=False).head(20), headers='keys', tablefmt='psql'))
-    # print(tb.tabulate(rules, headers='keys', tablefmt='psql'))
     print(len(rules))
     
     rules['alen'] = rules['antecedents'].apply(lambda x : len(x)) 
     rules['clen'] = rules['consequents'].apply(lambda x : len(x)) 
 
     dfq = rules.query("alen + clen == 2")
-    # item = dfq.loc[1, 'antecedents']
-    # print(list(item)[0])
-    # print(tb.tabulate(dfq.sort_values(by='confidence', ascending=False).head(20), headers='keys', tablefmt='psql'))
-    # cofValues = dfq['confidence'].tolist()
-    
-    # print(f'****** {len(dfq)} {min(cofValues)} {max(cofValues)} {statistics.mean(cofValues)} {statistics.quantiles(cofValues, n=4)}')
-    
-    
-    
-    
     return rules
 
 def generateRulesTactic(cocTTPs : List[List['domain.Technique']]):
@@ -351,11 +265,9 @@ def generateRulesTactic(cocTTPs : List[List['domain.Technique']]):
         transaction = list(set(transaction))
         transactions.append(transaction)
 
-    # print(transactions)
     te = TransactionEncoder()
     te_ary = te.fit(transactions).transform(transactions)
     df = pd.DataFrame(te_ary, columns=te.columns_)
-    # print(df.head())
 
     frequent_itemsets = fpgrowth(df, min_support=0.10, use_colnames=True)
     frequent_itemsets['len'] = frequent_itemsets['itemsets'].apply(lambda x : len(x))
@@ -371,11 +283,7 @@ def generateRulesTactic(cocTTPs : List[List['domain.Technique']]):
     print(Counter(lengths))
 
     rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.50)
-    # rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1.75)
     print(f'*** rules ***')
-    # print(tb.tabulate(rules.sort_values('support', ascending=False), headers='keys', tablefmt='psql'))
-    # print(tb.tabulate(rules, headers='keys', tablefmt='psql'))
-    # print(rules.dtypes)
     return rules
 
 
@@ -458,25 +366,15 @@ def generateGraph(cocTTPs : List[List['domain.Technique']], techniques : List['d
 def generateDiGraph2(cocTTPs : List[List['domain.Technique']], techniques : List['domain.Technique'], tactics : List['domain.Tactic']) -> nx.DiGraph:
 
     df = generateRules(cocTTPs)
-    # getTechniqueFrequentSequence(cocTTPs, techniques, tactics)
-    
-    # print(df)
-    # print(df.loc[0, 'antecedents'])
     df['alen'] = df['antecedents'].apply(lambda x : len(x)) 
     df['clen'] = df['consequents'].apply(lambda x : len(x)) 
 
     dfq = df.query("alen == 1 and clen == 1")
-    # item = dfq.loc[1, 'antecedents']
-    # print(list(item)[0])
-    # print(tb.tabulate(dfq, headers='keys', tablefmt='psql'))
     cofValues = dfq['confidence'].tolist()
     
     print(f'****** {statistics.quantiles(cofValues, n=4)}')
 
     dfqq = df.query("alen == 2 and clen == 1")
-    # print(f'dfqq ==> {len(dfqq)}')
-    # print(df.describe())
-    
     
     ttpsTuples = []
 
@@ -489,28 +387,7 @@ def generateDiGraph2(cocTTPs : List[List['domain.Technique']], techniques : List
     
     for item in ttpsTuples:
         edges.append([(item[0][0], item[0][1]), item[1], item[2]])
-
-    # for t1 in techniqueNames:
-    #     for t2 in techniqueNames:
-    #         if len([x for x in edges if (t1,t2) == x[0] or (t2,t1) == x[0] ]) == 0:
-    #             pair1 = next( (x for x in ttpsTuples if (t1,t2) == x[0] ), None )
-    #             pair2 = next( (x for x in ttpsTuples if (t2,t1) == x[0] ), None )
-                
-    #             if pair1 == None and pair2 == None:
-    #                 continue
-                
-    #             if pair1 != None and pair2 == None:
-    #                 edges.append( [(t1, t2), pair1[1]] )
-                
-    #             if pair1 == None and pair2 != None:
-    #                 edges.append( [(t2, t1), pair2[1]] )
-                    
-    #             if pair1 != None and pair2 != None:
-    #                 if pair1[1] > pair2[1] : 
-    #                     edges.append( [(t1, t2), pair1[1]] )
-    #                 else:
-    #                     edges.append( [(t2, t1), pair2[1]] )
-                    
+          
 
     cocDiGraph = nx.DiGraph()
 
@@ -529,8 +406,6 @@ def generateDiGraph2(cocTTPs : List[List['domain.Technique']], techniques : List
         te = next( (x for x in techniques if x.id == node) )
         cocDiGraph.nodes[node]['frequency'] = len([x for x in cocTTPs if te in x])
         cocDiGraph.nodes[node]['title'] = f'{cocDiGraph.nodes[node]["tactic"]}:{node}'
-        # cocDiGraph.nodes[node]['code'] = f'{alph[idx]}'
-        # idx += 1
     
     ig = igraph.Graph.from_networkx(cocDiGraph)
     edges = ig.feedback_arc_set()
@@ -540,53 +415,8 @@ def generateDiGraph2(cocTTPs : List[List['domain.Technique']], techniques : List
         source = ig.vs[ig.es[id].source]['_nx_name']
         target = ig.vs[ig.es[id].target]['_nx_name']
         tuples.append((source,target))
-
-    # print(tuples)
-        
-    # print(ig.es[0].source)
-    # print(ig.es[0].target)
-    # # print(ig.vs)
-    # # print(ig.get_edgelist())
-    # # print(edges)
-
-    # cocDiGraph2 = cocDiGraph.copy()
-
-    # for e in tuples:
-    #     cocDiGraph.remove_edge(e[0], e[1])
-
-    # nodes = [n for n in cocDiGraph.nodes(data=False)]
-    # for n1 in nodes:
-    #     for n2 in nodes:
-    #         if cocDiGraph.has_edge(n1, n2) and cocDiGraph.has_edge(n2, n1):
-    #             # print(f'{cocDiGraph.edges[n1,n2]} *** {cocDiGraph.edges[n2,n1]}')
-    #             e1 = cocDiGraph.edges[n1,n2]
-    #             e2 = cocDiGraph.edges[n2,n1]
-    #             if e1['weight'] > e2['weight']:
-    #                 cocDiGraph.remove_edge(n2, n1)
-    #             else:
-    #                 cocDiGraph.remove_edge(n1, n2)
-    
     print(f'number of nodes: {len(cocDiGraph.nodes)}')
     print(f'number of edges: {len(cocDiGraph.edges)}')
-    # print(f'density: {nx.density(cocDiGraph)}')
-    # print(f'diameter: {nx.diameter(cocDiGraph.to_undirected())}')
-    # print(f'radius: {nx.radius(cocDiGraph.to_undirected())}')
-    # print(f'eccentricity: {nx.eccentricity(cocDiGraph.to_undirected())}')
-    
-    # gcenter = nx.center(cocDiGraph.to_undirected())
-    # print([x for x in gcenter])
-    
-    # for node in cocDiGraph.nodes(data=True):
-    #     print(node[1]['tactic])
-    
-    # for edge in cocDiGraph.edges(data=True):
-    #     print(edge)
-    
-    
-    # dg = nx.DiGraph()
-    # dg.add_node('a')
-    # dg.add_node('b')
-    # dg.add_edge('a', 'b')
     
     tacticgroups = list(set(nx.get_node_attributes(cocDiGraph,'tactic').values()))
     plt.figure(3,figsize=(12,8))
@@ -600,7 +430,6 @@ def generateDiGraph2(cocTTPs : List[List['domain.Technique']], techniques : List
     
     labels = [n[1]['title'] for n in cocDiGraph.nodes(data=True)]
     labels = {n[0]: n[1]['title'] for n in cocDiGraph.nodes(data=True)}
-    # labels = {n[0]: n[1]['code'] for n in cocDiGraph.nodes(data=True)}
     tacticNameLists = [n[1]['tactic'] for n in cocDiGraph.nodes(data=True)]
     print(tacticNameLists)
     print(Counter(tacticNameLists))
@@ -608,53 +437,18 @@ def generateDiGraph2(cocTTPs : List[List['domain.Technique']], techniques : List
     
     
     for index in range(0, len(tacticgroups)):
-        # print(tacticgroups[index])
-        # print(colors[index])
         searchNodes = [x[0] for x in cocDiGraph.nodes(data=True) if x[1]['tactic'] == tacticgroups[index]]
         nsizes = [cocDiGraph.nodes[x]['frequency']*2000/669 for x in searchNodes]
-        # print(nsizes)
-        # nx.draw_networkx_nodes(cocDiGraph, pos=pos, nodelist=searchNodes, node_size=150, alpha=0.99, node_color=colors[index % 7], node_shape=shapes[index % 3], label=tacticnames[index])
-    
     
     esizes = []
     for edge in cocDiGraph.edges:
-        # print(f'{cocDiGraph.edges[edge[0], edge[1]]["weight"]}')
         esizes.append(cocDiGraph.edges[edge[0], edge[1]]["weight"])
     
-    # , connectionstyle="arc3,rad=0.4"
     nx.draw_networkx_edges(cocDiGraph, pos=pos, width=0.3, edge_color='grey')
-    # labels=labels,
     nx.draw_networkx_labels(cocDiGraph,  pos=pos, font_color='blue', font_size=15, font_weight='bold')
     
     plt.legend(scatterpoints = 1)
-    # plt.show()
-    
-    # searchNodes = [x for x in cocDiGraph.nodes(data=True) if x[1]['tactic'] == 'TA0005']
-    # print(searchNodes)
-    
-    # nx.draw_circular(cocDiGraph, with_labels=True)
-    # nx.draw_kamada_kawai(cocDiGraph, with_labels=False)
-    # plt.show()
-
-    # print(len(cocDiGraph.nodes))
     ig = igraph.Graph.from_networkx(cocDiGraph)
-    # layout = ig.layout("kk")
-    # igraph.plot(ig, layout=layout)
-    # plt.show()
-
-    # # out_fig_name = "digraph.eps"
-    # visual_style = {}
-    # colours = ['#fecc5c', '#a31a1c']
-    # visual_style["bbox"] = (3000,3000)
-    # visual_style["margin"] = 17
-    # visual_style["vertex_color"] = 'red'
-    # visual_style["vertex_size"] = 50
-    # visual_style["vertex_label_size"] = 80
-    # visual_style["edge_curved"] = False
-    # my_layout = ig.layout_auto()
-    # visual_style["layout"] = my_layout
-    # # igraph.plot(ig, out_fig_name, **visual_style)
-    # igraph.plot(ig, **visual_style)
     
     return cocDiGraph
 
